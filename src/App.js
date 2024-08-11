@@ -2,7 +2,6 @@ import { useState, useReducer } from "react";
 import {getDaysInMonth} from "./getDaysInMonth";
 
 const eventsReducer = (state, action) => {
-  // key: date, value: events (title, time, id)
   if (action?.type === "EVENT_ADD") {
     const dayEvents = state[action.event.date] ?? [];
     return {
@@ -11,6 +10,14 @@ const eventsReducer = (state, action) => {
         ...action.event,
         id: action.event.date + action.event.title + action.event.time
       }]
+    }
+  }
+
+  if (action?.type === "EVENT_REMOVE") {
+    const dayEvents = state[action.date];
+    return {
+      ...state,
+      [action.date]: dayEvents.filter(ev => ev.id !== action.eventId)
     }
   }
 
@@ -40,7 +47,6 @@ function App() {
   const [eventDate, setEventDate] = useState("");
   const [eventTitle, setEventTitle] = useState("");
   const [eventTime, setEventTime] = useState("");
-  const [showAddEventInputs, setShowAddEventInputs] = useState(true);
 
   const onClickDay = (dtString) => {
     setEventDate(dtString);
@@ -49,6 +55,10 @@ function App() {
   const onAddEvent = () => {
     dispatch({ type: "EVENT_ADD", event: { title: eventTitle, date: eventDate, time: eventTime } })
     clearInputs();
+  }
+
+  const onRemoveEvent = (date, eventId) => {
+    dispatch({ type: "EVENT_REMOVE", date, eventId })
   }
 
   const clearInputs = () => {
@@ -74,15 +84,13 @@ function App() {
           >
             Add event
           </button>
-          {showAddEventInputs && (
-            <div className="py-2 flex gap-2">
-              <input value={eventDate} onChange={e => {
-                setEventDate(e.target.value);
-              }} className="border w-1/6 p-1" name="event-date" title="event-date" type="date" />
-              <input value={eventTitle} onChange={e => setEventTitle(e.target.value)} className="border w-1/4 p-1" name="event-title" title="event-title" type="text" placeholder="Event name"/>
-              <input value={eventTime} onChange={e => setEventTime(e.target.value)} className="border p-1" name="event-time" title="event-time" type="time" />
-            </div>
-          )}
+          <div className="py-2 flex gap-2">
+            <input value={eventDate} onChange={e => {
+              setEventDate(e.target.value);
+            }} className="border w-1/6 p-1" name="event-date" title="event-date" type="date" />
+            <input value={eventTitle} onChange={e => setEventTitle(e.target.value)} className="border w-1/4 p-1" name="event-title" title="event-title" type="text" placeholder="Event name"/>
+            <input value={eventTime} onChange={e => setEventTime(e.target.value)} className="border p-1" name="event-time" title="event-time" type="time" />
+          </div>
         </div>
         <div className="grid grid-cols-7 gap-1 py-2">
           {daysOfMonth.map(dt => {
@@ -90,12 +98,22 @@ function App() {
             const dayEvents = events[dtString];
             return (
               // you can either use overflow-y-auto or remove fixed height (e.g., use min-h-32 instead)
-              <div key={dtString} onClick={() => onClickDay(dtString)} className="h-32 overflow-y-auto bg-gray-400 flex flex-col p-2">
+              <div key={dtString} onClick={() => onClickDay(dtString)} className="h-48 overflow-y-auto bg-gray-400 flex flex-col p-2">
                 <span className="text-white">{daysLabels[dt.getDay()]} - {dt.getDate()}</span>
-                {dayEvents?.length > 0 && dayEvents.map(t => (
-                  // TODO Add on click to edit/remove event
-                  <div key={t.id} className="bg-blue-400 p-2 rounded border border-solid border-black">
-                    <span>{t.title} - {t.time}</span>
+                {dayEvents?.length > 0 && dayEvents.map(ev => (
+                  <div key={ev.id} className="bg-blue-400 p-2 rounded border border-solid border-black flex flex-col">
+                    <span>{ev.time}</span>
+                    <span>{ev.title}</span>
+                    <div className="flex justify-end">
+                      <button
+                        onClick={e => {
+                          e.stopPropagation(); // avoid triggering parent's onClick
+                          onRemoveEvent(dtString, ev.id);
+                        }}
+                        className="bg-amber-600 rounded px-1 border border-black text-center"
+                      >x
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
